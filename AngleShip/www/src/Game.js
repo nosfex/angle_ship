@@ -17,7 +17,7 @@ Ship = function(game, context)
 };
 
 Ship.prototype = Object.create(Phaser.Sprite.prototype);
-Ship.prototype.constructor = Ship;
+Ship.prototype.constructor = Ship; 
 /* jshint browser:true */
 // create BasicGame Class
 BasicGame = {
