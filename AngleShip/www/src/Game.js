@@ -1,23 +1,93 @@
+Bullet = function(game, context, pngId)
+{
+    Phaser.Sprite.call(this, game, game.world.centerX, game.world.centerY, pngId);
+    
+    this.game = game;
+    this._context = context;
+//    game.add.existing(this);
+};
+
+Bullet.prototype = Object.create(Phaser.Sprite.prototype);
+Bullet.prototype.constructor = Bullet;
+
+Bullet.prototype.update = function()
+{
+      
+};
+
+Bullet.prototype.fire = function(x, y, angle, speed, gx, gy)
+{
+    
+    gx = gx || 0;
+    gy = gy || 0;
+    this.reset(x, y);
+    this.game.physics.arcade.velocityFromAngle(angle, speed, this.body.velocity);
+
+    this.angle = angle;
+
+    this.body.gravity.set(gx, gy);
+};
+
 Ship = function(game, context)
 {
     // GH: Phaser sprite call
-    Phaser.Sprite.call(this, game, game.world.randomX, 100, 'enemy_a');
+    Phaser.Sprite.call(this, game, game.world.centerX, game.world.centerY, 'ship_a');
     this.alive = true;
     this.health = 1;
     this.game = game;
     this.anchor.setTo(0.5, 0.5);
     game.physics.enable(this);
     this.body.collideWorldBounds = true;
- //   this.body.gravity.y = 1000;
-    this.body.bounce.y = 0.5;
-    this.body.maxVelocity.y = 500;
+    this.body.gravity.y = 0;
     // GH: Adding the object to the scene
     game.add.existing(this);
     this._context = context;
+    
+    // GH: add dem wings
+    this.leftWing = game.add.sprite(this.x - 22, this.y + 18, 'wing_a');
+    this.leftWing.anchor.setTo(0.5, 1);   
+    this.rightWing = game.add.sprite(this.x + 22, this.y + 18, 'wing_a');
+    this.rightWing.anchor.setTo(0.5, 1);
+    this.maxAperture = 45;
 };
 
 Ship.prototype = Object.create(Phaser.Sprite.prototype);
 Ship.prototype.constructor = Ship; 
+
+// GH: Override update function
+Ship.prototype.update = function()
+{
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.S))
+    {
+        this.leftWing.angle -=1;
+        this.rightWing.angle +=1;
+    }
+    
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.W))
+    {
+        this.leftWing.angle +=1;
+        this.rightWing.angle -= 1;
+    }    
+    if(this.leftWing.angle <= -this.maxAperture )
+    {
+        this.leftWing.angle = -this.maxAperture;   
+    }
+    if(this.leftWing.angle >= 0)
+    {
+        this.leftWing.angle = 0;
+    }
+    
+    if(this.rightWing.angle <= 0 )
+    {
+        this.rightWing.angle = 0;
+    }
+    if(this.rightWing.angle >= this.maxAperture)
+    {
+        this.rightWing.angle = this.maxAperture;
+    }
+    
+    
+};
 /* jshint browser:true */
 // create BasicGame Class
 BasicGame = {
@@ -26,6 +96,7 @@ BasicGame = {
 
 // create Game function in BasicGame
 BasicGame.Game = function (game) {
+    this.game = game;
 };
 
 // set Game function prototype
@@ -74,17 +145,13 @@ BasicGame.Game.prototype = {
         // Here we load the assets required for our preloader (in this case a 
         // background and a loading bar)
         this.load.image('logo', 'asset/phaser.png');
+        this.load.image('ship_a', 'asset/ship_a.png');
+        this.load.image('wing_a', 'asset/wing_a.png');
     },
 
     create: function () {
         // Add logo to the center of the stage
-        this.logo = this.add.sprite(
-            this.world.centerX, // (centerX, centerY) is the center coordination
-            this.world.centerY,
-            'logo');
-        // Set the anchor to the center of the sprite
-        this.logo.anchor.setTo(0.5, 0.5);
-
+        this.ship = new Ship(this.game, this);
     },
 
     gameResized: function (width, height) {
