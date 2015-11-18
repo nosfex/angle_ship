@@ -1,10 +1,11 @@
-Bullet = function(game, context, pngId)
+Bullet = function(game, pngId)
 {
-    Phaser.Sprite.call(this, game, game.world.centerX, game.world.centerY, pngId);
+    Phaser.Sprite.call(this, game, 0, 0, pngId);
     
     this.game = game;
-    this._context = context;
-//    game.add.existing(this);
+    this.checkWorldBounds = true;
+    this.outOfBoundsKill = true;
+    this.exists = false;
 };
 
 Bullet.prototype = Object.create(Phaser.Sprite.prototype);
@@ -12,7 +13,7 @@ Bullet.prototype.constructor = Bullet;
 
 Bullet.prototype.update = function()
 {
-      
+
 };
 
 Bullet.prototype.fire = function(x, y, angle, speed, gx, gy)
@@ -27,6 +28,98 @@ Bullet.prototype.fire = function(x, y, angle, speed, gx, gy)
 
     this.body.gravity.set(gx, gy);
 };
+
+Weapon = {};
+
+Weapon.SingleBullet = function(game, owner)
+{
+        this.owner = owner;
+        this.game = game;
+        Phaser.Group.call(this, game, game.world, 'Single Bullet', false, true, Phaser.Physics.ARCADE);
+
+        this.nextFire = 0;
+        this.bulletSpeed = 600;
+        this.fireRate = 100;
+
+        for (var i = 0; i < 64; i++)
+        {
+            this.add(new Bullet(game, 'bullet5'), true);
+        }
+
+        this.currentAperture = 270;
+        this.apertureIncrease = 5;
+        console.log("HOLTY");
+        return this;
+
+};
+
+Weapon.SingleBullet.prototype = Object.create(Phaser.Group.prototype);
+Weapon.SingleBullet.prototype.constructor = Weapon.SingleBullet;
+
+Weapon.SingleBullet.prototype.fire = function (source) {
+
+    if (this.game.time.time < this.nextFire) { return; }
+
+    var x = source.x - 10;
+    var y = source.y + 10;
+    var minAperture = -this.owner.currentAperture + 270;
+    var maxAperture = this.owner.currentAperture + 270;
+    if(this.currentAperture >= maxAperture )
+    {
+        this.currentAperture = maxAperture;
+        this.apertureIncrease *= -1;
+    }
+    
+    if(this.currentAperture <= minAperture )
+    {
+        this.currentAperture = minAperture;
+        this.apertureIncrease *= -1;
+    }
+    
+    //var aperture = this.game.rnd.integerInRange(minAperture, maxAperture);
+    this.getFirstExists(false).fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
+    this.currentAperture+=  this.apertureIncrease;
+    this.nextFire = this.game.time.time + this.fireRate;
+};
+
+
+Weapon.Laser = function(game, owner)
+{
+    this.owner = owner;
+    this.game = game;
+    Phaser.Group.call(this, game, game.world, 'Laser', false, true, Phaser.Physics.ARCADE);
+
+    this.nextFire = 0;
+    this.bulletSpeed = 1000;
+    this.fireRate = 45;
+
+    for (var i = 0; i < 64; i++)
+    {
+        this.add(new Bullet(game, 'bullet5'), true);
+    }
+
+    this.currentAperture = 270;
+    this.apertureIncrease = 5;
+    console.log("HOLTY");
+    return this;
+};
+
+
+Weapon.Laser.prototype = Object.create(Phaser.Group.prototype);
+Weapon.Laser.prototype.constructor = Weapon.Laser;
+
+Weapon.Laser.prototype.fire = function (source) {
+
+    if (this.game.time.time < this.nextFire) { return; }
+
+    var x = source.x - 10;
+    var y = source.y + 10;
+ 
+    //var aperture = this.game.rnd.integerInRange(minAperture, maxAperture);
+    this.getFirstExists(false).fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
+    this.nextFire = this.game.time.time + this.fireRate;
+};
+
 
 Ship = function(game, context)
 {
@@ -49,6 +142,8 @@ Ship = function(game, context)
     this.rightWing = game.add.sprite(this.x + 22, this.y + 18, 'wing_a');
     this.rightWing.anchor.setTo(0.5, 1);
     this.maxAperture = 45;
+    this.currentAperture = 0 ;
+    this.weapon = new Weapon.Laser(game, this);
 };
 
 Ship.prototype = Object.create(Phaser.Sprite.prototype);
@@ -67,6 +162,7 @@ Ship.prototype.update = function()
     {
         this.leftWing.angle +=1;
         this.rightWing.angle -= 1;
+        
     }    
     if(this.leftWing.angle <= -this.maxAperture )
     {
@@ -84,6 +180,11 @@ Ship.prototype.update = function()
     if(this.rightWing.angle >= this.maxAperture)
     {
         this.rightWing.angle = this.maxAperture;
+    }
+    this.currentAperture = this.rightWing.angle;
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.Q))
+    {
+        this.weapon.fire(this);
     }
     
     
@@ -145,6 +246,8 @@ BasicGame.Game.prototype = {
         // Here we load the assets required for our preloader (in this case a 
         // background and a loading bar)
         this.load.image('logo', 'asset/phaser.png');
+        this.load.image('bullet_5', 'asset/phaser.png');
+        
         this.load.image('ship_a', 'asset/ship_a.png');
         this.load.image('wing_a', 'asset/wing_a.png');
     },
