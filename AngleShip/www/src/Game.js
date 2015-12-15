@@ -100,7 +100,7 @@ Weapon.Laser = function(game, owner)
 
     this.currentAperture = 270;
     this.apertureIncrease = 5;
-    console.log("HOLTY");
+    
     return this;
 };
 
@@ -115,9 +115,18 @@ Weapon.Laser.prototype.fire = function (source) {
     var x = source.x - 10;
     var y = source.y + 10;
  
-    //var aperture = this.game.rnd.integerInRange(minAperture, maxAperture);
-    this.getFirstExists(false).fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
-    this.nextFire = this.game.time.time + this.fireRate;
+    
+    if(this.owner.currentAperture > 90)
+    {
+        this.fireRate = 400;
+        this.nextFire = this.game.time.time + this.fireRate;;    
+    }
+    else
+    {
+        this.fireRate = 45;
+        this.getFirstExists(false).fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
+        this.nextFire = this.game.time.time + this.fireRate;
+    }
 };
 
 
@@ -141,9 +150,11 @@ Ship = function(game, context)
     this.leftWing.anchor.setTo(0.5, 1);   
     this.rightWing = game.add.sprite(this.x + 22, this.y + 18, 'wing_a');
     this.rightWing.anchor.setTo(0.5, 1);
+    
+    // GH: Set the aperture.
     this.maxAperture = 45;
     this.currentAperture = 0 ;
-    this.weapon = new Weapon.Laser(game, this);
+    this.weapon = new Weapon.SingleBullet(game, this);
 };
 
 Ship.prototype = Object.create(Phaser.Sprite.prototype);
@@ -152,18 +163,30 @@ Ship.prototype.constructor = Ship;
 // GH: Override update function
 Ship.prototype.update = function()
 {
+    this.checkAngleInput();
+    // GH: Firing mah lazors
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.Q))
+    {
+        this.weapon.fire(this);
+    }
+    this.checkStrafe();
+};
+
+Ship.prototype.checkAngleInput = function()
+{
+   // GH: Shooting aperture input
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.S))
     {
         this.leftWing.angle -=1;
         this.rightWing.angle +=1;
     }
-    
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.W))
     {
         this.leftWing.angle +=1;
         this.rightWing.angle -= 1;
         
-    }    
+    }
+    // GH: Aperture conditions - LeftWing
     if(this.leftWing.angle <= -this.maxAperture )
     {
         this.leftWing.angle = -this.maxAperture;   
@@ -172,7 +195,7 @@ Ship.prototype.update = function()
     {
         this.leftWing.angle = 0;
     }
-    
+    // GH: Aperture conditions - RightWing
     if(this.rightWing.angle <= 0 )
     {
         this.rightWing.angle = 0;
@@ -181,12 +204,32 @@ Ship.prototype.update = function()
     {
         this.rightWing.angle = this.maxAperture;
     }
-    this.currentAperture = this.rightWing.angle;
-    if(this.game.input.keyboard.isDown(Phaser.Keyboard.Q))
+    this.currentAperture = this.rightWing.angle;  
+};
+// GH: Strafe.
+Ship.prototype.checkStrafe = function ()
+{
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.LEFT))
     {
-        this.weapon.fire(this);
+        this.body.velocity.x -= 1;    
+    }
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.RIGHT))
+    {
+        this.body.velocity.x += 1;
     }
     
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP))
+    {
+        this.body.velocity.y -= 1;    
+    }
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.DOWN))
+    {
+        this.body.velocity.y += 1;
+    }
+    // GH: Fix the position for the "wings"
+    this.rightWing.position.x  = this.position.x + 22;
+    this.leftWing.position.x  = this.position.x - 22;
+    this.leftWing.position.y = this.rightWing.position.y  = this.position.y + 18;
     
 };
 /* jshint browser:true */
