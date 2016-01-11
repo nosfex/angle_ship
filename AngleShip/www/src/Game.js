@@ -114,7 +114,6 @@ Weapon.Laser.prototype.fire = function (source) {
 
     var x = source.x - 10;
     var y = source.y + 10;
- 
     
     if(this.owner.currentAperture > 90)
     {
@@ -151,10 +150,18 @@ Ship = function(game, context)
     this.rightWing = game.add.sprite(this.x + 22, this.y + 18, 'wing_a');
     this.rightWing.anchor.setTo(0.5, 1);
     
+    game.physics.enable(this.rightWing);
+    game.physics.enable(this.leftWing);
+    
     // GH: Set the aperture.
     this.maxAperture = 45;
     this.currentAperture = 0 ;
-    this.weapon = new Weapon.SingleBullet(game, this);
+    this.weapons = [];
+    this.weapons.push( new Weapon.SingleBullet(game, this) );
+    this.weapons.push( new Weapon.Laser(game, this));
+    this.currentWeapon = 0;
+    
+    
 };
 
 Ship.prototype = Object.create(Phaser.Sprite.prototype);
@@ -164,12 +171,15 @@ Ship.prototype.constructor = Ship;
 Ship.prototype.update = function()
 {
     this.checkAngleInput();
+    this.body.velocity.setTo(0, 0);
     // GH: Firing mah lazors
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.Q))
     {
-        this.weapon.fire(this);
+        this.weapons[this.currentWeapon].fire(this);
     }
     this.checkStrafe();
+    this.checkWeaponCycle();
+    
 };
 
 Ship.prototype.checkAngleInput = function()
@@ -209,28 +219,50 @@ Ship.prototype.checkAngleInput = function()
 // GH: Strafe.
 Ship.prototype.checkStrafe = function ()
 {
+    
+    inVelocity = 300;
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.LEFT))
     {
-        this.body.velocity.x -= 1;    
+        this.body.velocity.x = -inVelocity;    
     }
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.RIGHT))
     {
-        this.body.velocity.x += 1;
+        this.body.velocity.x = inVelocity;
     }
     
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP))
     {
-        this.body.velocity.y -= 1;    
+        this.body.velocity.y = -inVelocity;  
     }
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.DOWN))
     {
-        this.body.velocity.y += 1;
+        this.body.velocity.y = inVelocity;
     }
     // GH: Fix the position for the "wings"
-    this.rightWing.position.x  = this.position.x + 22;
-    this.leftWing.position.x  = this.position.x - 22;
-    this.leftWing.position.y = this.rightWing.position.y  = this.position.y + 18;
+    this.rightWing.body.velocity.setTo(this.body.velocity.x, this.body.velocity.y);
+    this.leftWing.body.velocity.setTo(this.body.velocity.x, this.body.velocity.y);
+};
+
+Ship.prototype.checkWeaponCycle = function()
+{
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.A))
+    {
+        this.currentWeapon--;
+    }
     
+    if(this.game.input.keyboard.isDown(Phaser.Keyboard.D))
+    {
+        this.currentWeapon++;   
+    }
+    
+    if(this.currentWeapon < 0)
+    {
+        this.currentWeapon = this.weapons.length - 1;
+    }
+    else if (this.currentWeapon > this.weapons.length - 1)
+    {
+        this.currentWeapon = 0;
+    }
 };
 /* jshint browser:true */
 // create BasicGame Class
