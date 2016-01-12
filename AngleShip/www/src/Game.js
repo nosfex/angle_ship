@@ -1,3 +1,7 @@
+///////////////////////////////////////////////////////////////////////////////
+///////                             BULLET                              ///////
+///////////////////////////////////////////////////////////////////////////////
+
 Bullet = function(game, pngId)
 {
     Phaser.Sprite.call(this, game, 0, 0, pngId);
@@ -18,7 +22,6 @@ Bullet.prototype.update = function()
 
 Bullet.prototype.fire = function(x, y, angle, speed, gx, gy)
 {
-    
     gx = gx || 0;
     gy = gy || 0;
     this.reset(x, y);
@@ -28,6 +31,12 @@ Bullet.prototype.fire = function(x, y, angle, speed, gx, gy)
 
     this.body.gravity.set(gx, gy);
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////                        WEAPON BASE                              ///////
+///////////////////////////////////////////////////////////////////////////////
+
 
 Weapon = {};
 
@@ -82,6 +91,10 @@ Weapon.SingleBullet.prototype.fire = function (source) {
     this.nextFire = this.game.time.time + this.fireRate;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+///////                        WEAPON LASER                             ///////
+///////////////////////////////////////////////////////////////////////////////
+
 
 Weapon.Laser = function(game, owner)
 {
@@ -115,18 +128,27 @@ Weapon.Laser.prototype.fire = function (source) {
     var x = source.x - 10;
     var y = source.y + 10;
     
-    if(this.owner.currentAperture > 90)
+    if(this.owner.currentAperture > 20)
     {
-        this.fireRate = 400;
-        this.nextFire = this.game.time.time + this.fireRate;;    
+        this.fireRate = 1600;
+        b = this.getFirstExists(false);
+        b.scale.setTo(5, 5);//.fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
+        b.fire(x - b.width * .45, y, this.currentAperture , this.bulletSpeed, 0, 0);
+        console.log("PHAT BITCHES");
+        this.nextFire = this.game.time.time + this.fireRate;  
     }
     else
     {
         this.fireRate = 45;
+        this.getFirstExists(false).scale.setTo(1, 1);
         this.getFirstExists(false).fire(x, y, this.currentAperture , this.bulletSpeed, 0, 0);
         this.nextFire = this.game.time.time + this.fireRate;
     }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+///////                             SHIP                                ///////
+///////////////////////////////////////////////////////////////////////////////
 
 
 Ship = function(game, context)
@@ -153,6 +175,8 @@ Ship = function(game, context)
     game.physics.enable(this.rightWing);
     game.physics.enable(this.leftWing);
     
+    this.rightWing.body.collideWorldBounds = true;
+    this.leftWing.body.collideWorldBounds = true;
     // GH: Set the aperture.
     this.maxAperture = 45;
     this.currentAperture = 0 ;
@@ -161,6 +185,12 @@ Ship = function(game, context)
     this.weapons.push( new Weapon.Laser(game, this));
     this.currentWeapon = 0;
     
+    // GH: switch weapon
+    this.aKey = game.input.keyboard.addKey(Phaser.Keyboard.A);
+    this.dKey = game.input.keyboard.addKey(Phaser.Keyboard.D);
+    
+    this.aKey.onDown.add(this.prevWeapon, this);
+    this.dKey.onDown.add(this.nextWeapon, this);
     
 };
 
@@ -173,12 +203,12 @@ Ship.prototype.update = function()
     this.checkAngleInput();
     this.body.velocity.setTo(0, 0);
     // GH: Firing mah lazors
+  
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.Q))
     {
         this.weapons[this.currentWeapon].fire(this);
     }
     this.checkStrafe();
-    this.checkWeaponCycle();
     
 };
 
@@ -230,6 +260,7 @@ Ship.prototype.checkStrafe = function ()
         this.body.velocity.x = inVelocity;
     }
     
+    
     if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP))
     {
         this.body.velocity.y = -inVelocity;  
@@ -243,27 +274,84 @@ Ship.prototype.checkStrafe = function ()
     this.leftWing.body.velocity.setTo(this.body.velocity.x, this.body.velocity.y);
 };
 
+
+Ship.prototype.changeWeapon = function(direction)
+{   
+    this.weapons[this.currentWeapon].visible = false;
+    this.weapons[this.currentWeapon].callAll('reset', null, 0, 0);
+    this.weapons[this.currentWeapon].setAll('exists', false);
+    this.currentWeapon += direction;
+    this.checkWeaponCycle();
+    this.weapons[this.currentWeapon].visible = true;
+};
+
+Ship.prototype.prevWeapon = function()
+{
+   this.changeWeapon(-1);
+};
+
+Ship.prototype.nextWeapon = function()
+{
+    this.changeWeapon(1);
+};
 Ship.prototype.checkWeaponCycle = function()
 {
-    if(this.game.input.keyboard.isDown(Phaser.Keyboard.A))
-    {
-        this.currentWeapon--;
-    }
-    
-    if(this.game.input.keyboard.isDown(Phaser.Keyboard.D))
-    {
-        this.currentWeapon++;   
-    }
-    
     if(this.currentWeapon < 0)
     {
         this.currentWeapon = this.weapons.length - 1;
     }
+   
     else if (this.currentWeapon > this.weapons.length - 1)
     {
         this.currentWeapon = 0;
     }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+///////                         ENEMY BASE                              ///////
+///////////////////////////////////////////////////////////////////////////////
+
+Enemy = {};
+
+Enemy.Rock = function(game, context, id, pngId)
+{
+    Phaser.Sprite.call(this, game, game.world.randomX, game.world.randomY, pngId);
+    this.alive = true;
+    this.health = 1;
+    this.game = game;
+    this.anchor.setTo(0.5, 0.5);
+    game.physics.enable(this);
+    this.body.checkWorldBounds = true;
+    this.body.outOfBoundsKill = true;
+    this.body.gravity.y = 0;
+    // GH: Adding the object to the scene
+    game.add.existing(this);
+    this._context = context;
+    
+    
+    this.body.velocity.setTo(game.rnd.integerInRange(-400, 400), game.rnd.integerInRange(-400, 400));
+};
+
+Enemy.Rock.prototype = Object.create(Phaser.Sprite.prototype);
+Enemy.Rock.prototype.constructor = Enemy.Rock;
+
+Enemy.Rock.prototype.update = function()
+{
+    
+};
+
+Enemy.RockGroup = function(game, context)
+{
+    this.game = game;
+    this.context = context;
+};
+Enemy.RockGroup.prototype = Object.create(Phaser.Group.prototype);
+Enemy.RockGroup.prototype.constructor = Enemy.RockGroup;
+
+///////////////////////////////////////////////////////////////////////////////
+///////                             GAME                                ///////
+///////////////////////////////////////////////////////////////////////////////
+
 /* jshint browser:true */
 // create BasicGame Class
 BasicGame = {
@@ -325,11 +413,15 @@ BasicGame.Game.prototype = {
         
         this.load.image('ship_a', 'asset/ship_a.png');
         this.load.image('wing_a', 'asset/wing_a.png');
+        this.load.image('meteor', 'asset/meteor2.png');
     },
 
     create: function () {
         // Add logo to the center of the stage
         this.ship = new Ship(this.game, this);
+        
+        
+        this.rock = new Enemy.Rock(this.game, this, 'rock', 'meteor' );
     },
 
     gameResized: function (width, height) {
@@ -340,6 +432,15 @@ BasicGame.Game.prototype = {
         // this callback is only really useful if you use a ScaleMode of RESIZE 
         // and place it inside your main game state.
 
+    },
+    
+    update: function()
+    {
+        if(this.rock == null)
+        {
+              console.log("SHIT PISS");
+            this.rock = new Enemy.Rock(this.game, this, 'rock', 'meteor' );
+        }
     }
 
 };
