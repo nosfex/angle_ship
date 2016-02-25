@@ -272,6 +272,9 @@ Ship.prototype.checkStrafe = function ()
     // GH: Fix the position for the "wings"
     this.rightWing.body.velocity.setTo(this.body.velocity.x, this.body.velocity.y);
     this.leftWing.body.velocity.setTo(this.body.velocity.x, this.body.velocity.y);
+    
+    this.leftWing.position.setTo(this.x - 22, this.y + 18);
+    this.rightWing.position.setTo(this.x + 22, this.y + 18);
 };
 
 
@@ -293,6 +296,11 @@ Ship.prototype.prevWeapon = function()
 Ship.prototype.nextWeapon = function()
 {
     this.changeWeapon(1);
+};
+
+Ship.prototype.getCurrentWeapon = function()
+{
+    return this.weapons[this.currentWeapon];
 };
 Ship.prototype.checkWeaponCycle = function()
 {
@@ -322,14 +330,12 @@ Enemy.Rock = function(game, context, id, pngId)
     this.anchor.setTo(0.5, 0.5);
     game.physics.enable(this);
     this.body.checkWorldBounds = true;
-    this.body.outOfBoundsKill = true;
     this.body.gravity.y = 0;
     // GH: Adding the object to the scene
     game.add.existing(this);
+    this.outOfBoundsKill = true;
     this._context = context;
-    
-    
-    this.body.velocity.setTo(game.rnd.integerInRange(-400, 400), game.rnd.integerInRange(-400, 400));
+    this.body.velocity.setTo(game.rnd.integerInRange(-100, 100), game.rnd.integerInRange(-100, 100));
 };
 
 Enemy.Rock.prototype = Object.create(Phaser.Sprite.prototype);
@@ -337,7 +343,7 @@ Enemy.Rock.prototype.constructor = Enemy.Rock;
 
 Enemy.Rock.prototype.update = function()
 {
-    
+
 };
 
 Enemy.RockGroup = function(game, context)
@@ -436,11 +442,19 @@ BasicGame.Game.prototype = {
     
     update: function()
     {
-        if(this.rock == null)
+        if(this.rock.alive == false)
         {
               console.log("SHIT PISS");
             this.rock = new Enemy.Rock(this.game, this, 'rock', 'meteor' );
         }
-    }
+        
+        this.game.physics.arcade.overlap(this.rock, this.ship.getCurrentWeapon(), this.collisionHandler, null, this);
 
+    },
+    
+    
+    collisionHandler : function(rock, wpn)
+    {
+        rock.kill();
+    }
 };
